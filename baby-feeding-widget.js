@@ -67,10 +67,17 @@ function statusColor(mins) {
   if (mins < 210) return Color.orange()
   return Color.red()
 }
-function fmtElapsed(mins) {           // 分钟 → "42m" / "4.2h" / "1.2d"
+function fmtElapsed(mins) {           // 分钟 → "42分钟" / "3小时07分" / "1天3小时"
+  if (mins < 60) return mins + "分钟"
+  const h = Math.floor(mins / 60), m = mins % 60
+  if (h < 24) return h + "小时" + (m > 0 ? String(m).padStart(2, "0") + "分" : "")
+  return Math.floor(h / 24) + "天" + (h % 24) + "小时"
+}
+function fmtElapsedShort(mins) {      // 锁屏/条形紧凑版 → "42m" / "3h07m"
   if (mins < 60) return mins + "m"
-  if (mins < 48 * 60) return (mins / 60).toFixed(1) + "h"
-  return (mins / 24 / 60).toFixed(1) + "d"
+  const h = Math.floor(mins / 60), m = mins % 60
+  if (h < 24) return h + "h" + String(m).padStart(2, "0") + "m"
+  return Math.floor(h / 24) + "d" + (h % 24) + "h"
 }
 
 // ---------- 拉数据 ----------
@@ -212,7 +219,7 @@ function renderCircular(s) {
   const stack = w.addStack()
   stack.layoutVertically()
   stack.centerAlignContent()
-  const e = stack.addText(s.hasData && s.lastMins >= 0 ? fmtElapsed(s.lastMins) : "--")
+  const e = stack.addText(s.hasData && s.lastMins >= 0 ? fmtElapsedShort(s.lastMins) : "--")
   e.font = Font.boldSystemFont(16)
   e.textColor = color
   const d = stack.addText("距喂奶")
@@ -228,7 +235,7 @@ function renderInline(s) {
     w.addText("🍼 暂无数据").textColor = color
     return w
   }
-  const t = w.addText("🍼 " + s.lastTime + " · " + fmtElapsed(s.lastMins))
+  const t = w.addText("🍼 " + s.lastTime + " · " + fmtElapsedShort(s.lastMins))
   t.textColor = color
   return w
 }
