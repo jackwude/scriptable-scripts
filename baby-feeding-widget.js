@@ -129,6 +129,18 @@ function summarize(feeds) {
 }
 
 // ---------- 渲染 ----------
+function addQuickButton(parent, label, type) {   // 快捷记录按钮（中间件样式）
+  const btn = parent.addStack()
+  btn.backgroundColor = Color.dynamic(new Color("#EEF0F6"), new Color("#2C2C2E"))
+  btn.cornerRadius = 8
+  btn.setPadding(6, 10, 6, 10)
+  btn.url = "scriptable:///run/baby-record?type=" + type
+  const t = btn.addText(label)
+  t.font = Font.mediumSystemFont(12)
+  t.textColor = Color.dynamic(new Color("#111111"), Color.white())
+  return btn
+}
+
 function renderWidget(s) {
   const w = new ListWidget()
   w.backgroundColor = Color.dynamic(new Color("#FFFFFF"), new Color("#1C1C1E"))
@@ -174,7 +186,7 @@ function renderWidget(s) {
   w.addSpacer(6)
 
   // 最近记录列表（点击 → baby-tracker）
-  for (let i = 1; i < s.list.length; i++) {
+  for (let i = 1; i < s.list.length && i < 4; i++) {
     const r = s.list[i]
     const row = w.addStack()
     row.layoutHorizontally()
@@ -188,6 +200,18 @@ function renderWidget(s) {
     rm.textColor = Color.dynamic(new Color("#333333"), new Color("#CCCCCC"))
     w.addSpacer(2)
   }
+
+  // 快捷记录行（点击 → 打开 baby-record 脚本一键入库）
+  const quickRow = w.addStack()
+  quickRow.layoutHorizontally()
+  quickRow.addSpacer(null)
+  addQuickButton(quickRow, "🍼 喂奶", "feed")
+  quickRow.addSpacer(6)
+  addQuickButton(quickRow, "💩 尿了", "wet")
+  quickRow.addSpacer(6)
+  addQuickButton(quickRow, "💊 AD", "ad")
+  quickRow.addSpacer(null)
+  w.addSpacer(4)
 
   // 底部提示 + 更新时间
   w.addSpacer(null)
