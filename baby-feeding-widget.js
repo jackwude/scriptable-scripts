@@ -1,4 +1,4 @@
-// 🍼 得宝喂奶小组件 v3.8（支持 GitHub 自更新）
+// 🍼 得宝喂奶小组件 v3.9（支持 GitHub 自更新）
 // ============================================================
 // 用法：
 // 1. iPhone 安装 Scriptable App
@@ -192,7 +192,7 @@ function renderWidget(s) {
   e1.textColor = color
   w.addSpacer(6)
 
-  // 两张卡 8:2 固定宽（实测中号内宽≈306：左240 + 缝4 + 右62）
+  // 两张卡：左卡弹性吃满剩余宽度，右卡固定62贴右缘（任何机型零空隙）
   const cardsRow = w.addStack()
   cardsRow.layoutHorizontally()
 
@@ -200,13 +200,13 @@ function renderWidget(s) {
   const cardText = Color.dynamic(new Color("#111111"), Color.white())
   const cardSub = Color.gray()
 
-  // 左卡（8）：今日奶量 + 进度条
+  // 左卡（弹性宽 8）：今日奶量 + 进度条
   const c1 = cardsRow.addStack()
   c1.layoutVertically()
   c1.backgroundColor = cardBg
   c1.cornerRadius = 10
   c1.setPadding(8, 10, 8, 10)
-  c1.size = new Size(240, 74)
+  c1.size = new Size(0, 74)           // 宽 0=自动，靠内部弹性撑满
   const c1t = c1.addText("今日奶量")
   c1t.font = Font.systemFont(10)
   c1t.textColor = cardSub
@@ -221,23 +221,33 @@ function renderWidget(s) {
     bar.layoutHorizontally()
     bar.cornerRadius = 3
     bar.backgroundColor = Color.dynamic(new Color("#DDE1E8"), new Color("#3A3D44"))
-    bar.size = new Size(200, 5)       // 240 - 左右 padding 20 → 再留 20 余量
+    bar.size = new Size(0, 5)         // 弹性宽进度条，吃满左卡内宽
     // 🔴 fill 在 spacer 前：已喝（亮色）在左，未喝（底槽）在右
     const fill = bar.addStack()
     fill.backgroundColor = pct >= 1 ? Color.green() : color
     fill.cornerRadius = 3
-    fill.size = new Size(Math.round(200 * pct), 5)
-    bar.addSpacer(null)
+    // 用百分比近似：按预估内宽 220 基准填充 → 比例正确，宽度自适应
+    fill.size = new Size(Math.round(220 * pct), 5)
+    bar.addSpacer(null)               // 底槽吃满进度条自身
+    // 🔑 左卡弹性来源（无体重也生效）：caption 行带弹性 spacer
+    const c1row = c1.addStack()
+    c1row.layoutHorizontally()
+    const c1c = c1row.addText(s.todayMl + " / " + target + "ml")
+    c1c.font = Font.systemFont(9)
+    c1c.textColor = cardSub
+    c1row.addSpacer(null)
+  } else {
+    const c1row = c1.addStack()
+    c1row.layoutHorizontally()
+    const c1c = c1row.addText("体重待录入")
+    c1c.font = Font.systemFont(9)
+    c1c.textColor = cardSub
+    c1row.addSpacer(null)
   }
-  const c1c = c1.addText(s.weightG && s.weightG > 0
-    ? s.todayMl + " / " + Math.round((s.weightG / 1000) * 150) + "ml"
-    : "体重待录入")
-  c1c.font = Font.systemFont(9)
-  c1c.textColor = cardSub
 
   cardsRow.addSpacer(4)               // 固定小缝
 
-  // 右卡（2）：今日次数（间隔小字贴底）
+  // 右卡（固定 2）：今日次数（间隔小字贴底）
   const c2 = cardsRow.addStack()
   c2.layoutVertically()
   c2.backgroundColor = cardBg
