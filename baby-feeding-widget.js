@@ -1,4 +1,4 @@
-// 🍼 得宝喂奶小组件 v2.8（支持 GitHub 自更新）
+// 🍼 得宝喂奶小组件 v2.9（支持 GitHub 自更新）
 // ============================================================
 // 用法：
 // 1. iPhone 安装 Scriptable App
@@ -99,6 +99,20 @@ async function fetchFeeds() {
   return await req.loadJSON()         // [{amount_ml, recorded_at}, ...]
 }
 
+// 拉最新体重（进度条目标用：150ml/kg/天）
+async function fetchLatestWeight() {
+  const url = SUPABASE_URL + "/rest/v1/weight_records" +
+    "?select=weight_g&order=recorded_at.desc&limit=1"
+  const req = new Request(url)
+  req.headers = {
+    "apikey": SUPABASE_KEY,
+    "Authorization": "Bearer " + SUPABASE_KEY,
+    "Accept": "application/json"
+  }
+  const rows = await req.loadJSON()
+  return rows.length > 0 && rows[0].weight_g ? rows[0].weight_g : null
+}
+
 // ---------- 汇总 ----------
 function summarize(feeds) {
   const now = Date.now()
@@ -178,28 +192,62 @@ function renderWidget(s) {
   d1.textColor = Color.gray()
   w.addSpacer(8)
 
-  // 今日汇总
-  const todayStr = "今日 " + s.todayMl + "ml · " + s.todayCount + " 次"
-  const t2 = w.addText(todayStr)
-  t2.font = Font.mediumSystemFont(15)
-  t2.textColor = Color.dynamic(new Color("#111111"), Color.white())
-  w.addSpacer(6)
+  // 双列卡片：今日奶量（含进度条）| 今日次数
+  const cards = w.addStack()
+  cards.layoutHorizontally()
 
-  // 最近记录列表（点击 → baby-tracker）
-  for (let i = 1; i < s.list.length && i < 4; i++) {
-    const r = s.list[i]
-    const row = w.addStack()
-    row.layoutHorizontally()
-    row.url = TRACKER_URL
-    const rt = row.addText(r.time)
-    rt.font = Font.systemFont(12)
-    rt.textColor = Color.dynamic(new Color("#333333"), new Color("#CCCCCC"))
-    row.addSpacer(null)
-    const rm = row.addText(r.ml + "ml")
-    rm.font = Font.systemFont(12)
-    rm.textColor = Color.dynamic(new Color("#333333"), new Color("#CCCCCC"))
-    w.addSpacer(2)
+  const cardBg = Color.dynamic(new Color("#F2F4F8"), new Color("#2A2C31"))
+  const cardText = Color.dynamic(new Color("#111111"), Color.white())
+  const cardSub = Color.gray()
+
+  // 左卡：今日奶量
+  const c1 = cards.addStack()
+  c1.layoutVertically()
+  c1.backgroundColor = cardBg
+  c1.cornerRadius = 10
+  c1.setPadding(10, 12, 10, 12)
+  const c1t = c1.addText("今日奶量")
+  c1t.font = Font.systemFont(10)
+  c1t.textColor = cardSub
+  const c1v = c1.addText(s.todayMl + "ml")
+  c1v.font = Font.boldSystemFont(20)
+  c1v.textColor = cardText
+  // 进度条：目标 = 体重kg × 150ml/kg（WHO 中间值）
+  if (s.weightG) {
+    const target = Math.round((s.weightG / 1000) * 150)
+    const pct = Math.min(1, s.todayMl / target)
+    const bar = c1.addStack()
+    bar.layoutHorizontally()
+    bar.cornerRadius = 3
+    bar.backgroundColor = Color.dynamic(new Color("#DDE1E8"), new Color("#3A3D44"))
+    bar.addSpacer(null)
+    const fill = bar.addStack()
+    fill.backgroundColor = pct >= 1 ? Color.green() : color
+    fill.cornerRadius = 3
+    fill.size = new Size(Math.round(100 * pct), 6)
+    const cap = c1.addText(s.todayMl + " / " + target + "ml")
+    cap.font = Font.systemFont(9)
+    cap.textColor = cardSub
   }
+
+  cards.addSpacer(8)
+
+  // 右卡：今日次数
+  const c2 = cards.addStack()
+  c2.layoutVertically()
+  c2.backgroundColor = cardBg
+  c2.cornerRadius = 10
+  c2.setPadding(10, 12, 10, 12)
+  const c2t = c2.addText("今日次数")
+  c2t.font = Font.systemFont(10)
+  c2t.textColor = cardSub
+  const c2v = c2.addText(s.todayCount + " 次")
+  c2v.font = Font.boldSystemFont(20)
+  c2v.textColor = cardText
+  const c2s = c2.addText(s.todayCount > 0 ? "间隔约 " + fmtElapsed(Math.round(1440 / s.todayCount)) : "还没有记录")
+  c2s.font = Font.systemFont(9)
+  c2s.textColor = cardSub
+  w.addSpacer(8)
 
   // 快捷记录行（点击 → 打开 baby-record 脚本一键入库）
   const quickRow = w.addStack()
@@ -289,6 +337,7 @@ function renderInline(s) {
 // ---------- 主流程 ----------
 async function main() {
   let feeds = []
+  let weightG = null
   try {
     feeds = await fetchFeeds()
   } catch (err) {
@@ -298,7 +347,9 @@ async function main() {
     w.textColor = Color.red()
     return w
   }
+  try { weightG = await fetchLatestWeight() } catch (e) { weightG = null }
   const s = summarize(feeds)
+  s.weightG = weightG
   const family = config.widgetFamily || "medium"
   if (family === "accessoryCircular") return renderCircular(s)
   if (family === "accessoryInline") return renderInline(s)
