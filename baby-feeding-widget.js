@@ -1,4 +1,4 @@
-// 🍼 得宝喂奶小组件 v3.9（支持 GitHub 自更新）
+// 🍼 得宝喂奶小组件 v4.0（支持 GitHub 自更新）
 // ============================================================
 // 用法：
 // 1. iPhone 安装 Scriptable App
@@ -266,18 +266,18 @@ function renderWidget(s) {
   c2s.textColor = cardSub
   w.addSpacer(6)
 
-  // 快捷记录行（点击 → 打开 baby-record 脚本一键入库）
+  // 快捷记录行：5 个按钮之间弹性均分，左右贴边（与上方两卡同宽）
   const quickRow = w.addStack()
   quickRow.layoutHorizontally()
-  quickRow.addSpacer(null)
   addQuickButton(quickRow, "🍼 喂奶", "feed")
-  quickRow.addSpacer(6)
+  quickRow.addSpacer(null)
   addQuickButton(quickRow, "💦 尿了", "wet")
-  quickRow.addSpacer(6)
+  quickRow.addSpacer(null)
   addQuickButton(quickRow, "💩 拉了", "dirty")
-  quickRow.addSpacer(6)
+  quickRow.addSpacer(null)
   addQuickButton(quickRow, "💊 AD", "ad")
   quickRow.addSpacer(null)
+  addQuickButton(quickRow, "🌡️ 体温", "temp")
   w.addSpacer(4)
 
   // 底部提示 + 更新时间
