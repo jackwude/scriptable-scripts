@@ -132,11 +132,11 @@ function summarize(feeds) {
 function addQuickButton(parent, label, type) {   // 快捷记录按钮（中间件样式）
   const btn = parent.addStack()
   btn.backgroundColor = Color.dynamic(new Color("#EEF0F6"), new Color("#2C2C2E"))
-  btn.cornerRadius = 8
-  btn.setPadding(6, 10, 6, 10)
+  btn.cornerRadius = 7
+  btn.setPadding(5, 8, 5, 8)
   btn.url = "scriptable:///run/baby-record?type=" + type
   const t = btn.addText(label)
-  t.font = Font.mediumSystemFont(12)
+  t.font = Font.mediumSystemFont(11)
   t.textColor = Color.dynamic(new Color("#111111"), Color.white())
   return btn
 }
@@ -206,9 +206,11 @@ function renderWidget(s) {
   quickRow.layoutHorizontally()
   quickRow.addSpacer(null)
   addQuickButton(quickRow, "🍼 喂奶", "feed")
-  quickRow.addSpacer(6)
+  quickRow.addSpacer(5)
   addQuickButton(quickRow, "💩 尿了", "wet")
-  quickRow.addSpacer(6)
+  quickRow.addSpacer(5)
+  addQuickButton(quickRow, "💩 拉了", "dirty")
+  quickRow.addSpacer(5)
   addQuickButton(quickRow, "💊 AD", "ad")
   quickRow.addSpacer(null)
   w.addSpacer(4)
