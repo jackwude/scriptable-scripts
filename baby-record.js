@@ -1,20 +1,48 @@
-// 🍼 得宝一键记录 v1.0
+// 🍼 得宝一键记录 v1.2
 // ============================================================
 // 用法：
 // 1. Scriptable 新建脚本，命名「baby-record」，粘贴本代码
-// 2. 在喂奶小组件（中号）上点击「🍼 喂奶」「💩 尿了」「💊 AD」
+// 2. 在喂奶小组件（中号）上点击「🍼 喂奶」「💩 尿了」「💩 拉了」「💊 AD」
 //    会自动打开本脚本并完成记录
 // 3. 也可以直接运行本脚本：无参数时弹出选择菜单
 //
 // URL scheme 参数（可选）：
-//   type=feed  喂奶（可带 amount=215 直接指定奶量，否则弹菜单选择）
+//   type=feed  喂奶（可带 amount=215 直接指定奶量，否则弹动态菜单）
 //   type=wet   尿了
 //   type=dirty 拉了
 //   type=ad    吃 AD
 //
 // 需要权限：网络访问（首次运行 Scriptable 会弹窗询问）
 // 记录写入 Supabase，与飞书群录入同一张表（source=scriptable）
+//
+// 自更新（v1.2 新增）：手动运行（无 type 参数）时自动检查 GitHub
+// 新版本并覆盖本地。按钮调用（带 type 参数）快速执行，跳过更新检查。
+// 想关掉：SOURCE 改成空字符串 ""。
 // ============================================================
+
+const SOURCE = "https://raw.githubusercontent.com/jackwude/scriptable-scripts/main/baby-record.js"
+
+async function checkAndSelfUpdate() {
+  if (!SOURCE) return
+  try {
+    const req = new Request(SOURCE)
+    req.timeoutInterval = 10
+    const remote = await req.loadString()
+    if (!remote || remote.startsWith("<")) return
+    const fm = FileManager.iCloud().fileExists(module.filename)
+      ? FileManager.iCloud() : FileManager.local()
+    if (fm.readString(module.filename) === remote) return
+    fm.writeString(module.filename, remote)
+    const alert = new Alert()
+    alert.title = "🍼 脚本已更新"
+    alert.message = "已从 GitHub 下载新版本，请再运行一次。"
+    alert.addAction("好")
+    await alert.presentAlert()
+    Script.exit()
+  } catch (e) {
+    // 静默失败，不影响使用
+  }
+}
 
 const SUPABASE_URL = "https://elkcynbsoopvizmuevma.supabase.co"
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVsa2N5bmJzb29wdml6bXVldm1hIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc1NzU1OTksImV4cCI6MjA5MzE1MTU5OX0.LScczDOGWPPUNhnUEUk6l6AH_TrTO3OgwkOHaM48zuY"
@@ -143,7 +171,10 @@ async function main() {
   let type = (params.type || "").toLowerCase()
   let amount = parseInt(params.amount)
 
+  // 按钮调用（带 type 参数）→ 直接快速执行，跳过自更新
+  // 手动运行（无参数）→ 先检查 GitHub 更新
   if (!type) {
+    await checkAndSelfUpdate()
     type = await chooseType()
     if (!type) return
   }
