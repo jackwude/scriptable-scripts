@@ -1,4 +1,4 @@
-// 🍼 得宝喂奶小组件 v4.0（支持 GitHub 自更新）
+// 🍼 得宝喂奶小组件 v4.1（支持 GitHub 自更新）
 // ============================================================
 // 用法：
 // 1. iPhone 安装 Scriptable App
@@ -146,11 +146,11 @@ function summarize(feeds) {
 function addQuickButton(parent, label, type) {   // 快捷记录按钮（中间件样式）
   const btn = parent.addStack()
   btn.backgroundColor = Color.dynamic(new Color("#EEF0F6"), new Color("#2C2C2E"))
-  btn.cornerRadius = 8
-  btn.setPadding(7, 12, 7, 12)
+  btn.cornerRadius = 7
+  btn.setPadding(5, 9, 5, 9)
   btn.url = "scriptable:///run/baby-record?type=" + type
   const t = btn.addText(label)
-  t.font = Font.mediumSystemFont(13)
+  t.font = Font.mediumSystemFont(12)
   t.textColor = Color.dynamic(new Color("#111111"), Color.white())
   return btn
 }
@@ -206,7 +206,7 @@ function renderWidget(s) {
   c1.backgroundColor = cardBg
   c1.cornerRadius = 10
   c1.setPadding(8, 10, 8, 10)
-  c1.size = new Size(0, 74)           // 宽 0=自动，靠内部弹性撑满
+  c1.size = new Size(0, 66)           // 宽 0=自动，靠内部弹性撑满；高压缩配合按钮行
   const c1t = c1.addText("今日奶量")
   c1t.font = Font.systemFont(10)
   c1t.textColor = cardSub
@@ -253,7 +253,7 @@ function renderWidget(s) {
   c2.backgroundColor = cardBg
   c2.cornerRadius = 10
   c2.setPadding(8, 8, 8, 8)
-  c2.size = new Size(62, 74)
+  c2.size = new Size(62, 66)
   const c2t = c2.addText("次数")
   c2t.font = Font.systemFont(10)
   c2t.textColor = cardSub
