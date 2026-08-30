@@ -1,4 +1,4 @@
-// 🍼 得宝喂奶小组件 v3.6（支持 GitHub 自更新）
+// 🍼 得宝喂奶小组件 v3.7（支持 GitHub 自更新）
 // ============================================================
 // 用法：
 // 1. iPhone 安装 Scriptable App
@@ -192,7 +192,7 @@ function renderWidget(s) {
   e1.textColor = color
   w.addSpacer(6)
 
-  // 两张卡 6:4 铺满整行：弹性扩展 + 固定偏置（任意宽度自适应，零写死总宽）
+  // 两张卡 8:2 铺满整行：弹性扩展 + 固定偏置（任意宽度自适应，零写死总宽）
   const cardsRow = w.addStack()
   cardsRow.layoutHorizontally()
 
@@ -236,8 +236,8 @@ function renderWidget(s) {
   c1c.font = Font.systemFont(9)
   c1c.textColor = cardSub
   c1row.addSpacer(null)
-  const bias = c1row.addStack()       // 隐形偏置块：撑出 6:4 比例
-  bias.size = new Size(60, 1)
+  const bias = c1row.addStack()       // 隐形偏置块：撑出 8:2 比例
+  bias.size = new Size(90, 1)
 
   cardsRow.addSpacer(4)               // 固定小缝
 
