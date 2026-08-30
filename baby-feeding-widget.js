@@ -1,0 +1,263 @@
+// 🍼 得宝喂奶小组件 v2.0（支持 GitHub 自更新）
+// ============================================================
+// 用法：
+// 1. iPhone 安装 Scriptable App
+// 2. 新建脚本 → 粘贴本代码 → 命名（如"喂奶小组件"）
+// 3. 桌面添加 Scriptable 小组件（小/中/大均可），选本脚本
+// 4. 锁屏编辑 → 添加 Scriptable 圆形小组件，选本脚本
+//
+// 需要权限：
+// - 网络访问（首次运行 Scriptable 会弹窗询问，允许即可）
+// - 无其他权限。数据只读，不写入任何东西。
+//
+// 自更新（v2.0 新增）：
+// - 在 Scriptable App 内运行时自动检查 GitHub 仓库新版本，
+//   有更新则覆盖本地脚本并提示重新运行。之后不用再手动复制代码。
+// - 小组件刷新路径不联网（config.runsInWidget 直接跳过），
+//   锁屏/桌面小组件永远用本地已存代码，不会因网络请求白屏。
+// - 想关掉更新：把 SOURCE 改成空字符串 "" 即可。
+//
+// 刷新：iOS 决定实际刷新时机，脚本请求 15 分钟一次；
+//        打开 Scriptable App 运行一次可立即刷新。
+// ============================================================
+
+// ---------- GitHub 自更新（仅在 App 内运行时检查） ----------
+const SOURCE = "https://raw.githubusercontent.com/jackwude/scriptable-scripts/main/baby-feeding-widget.js"
+
+async function checkAndSelfUpdate() {
+  if (!SOURCE || config.runsInWidget) return   // 小组件路径不联网
+  try {
+    const req = new Request(SOURCE)
+    req.timeoutInterval = 10
+    const remote = await req.loadString()
+    if (!remote || remote.startsWith("<")) return  // 远程返回 HTML = 链接错了，不写入
+    const fm = FileManager.iCloud().fileExists(module.filename)
+      ? FileManager.iCloud() : FileManager.local()
+    if (fm.readString(module.filename) === remote) return  // 无变化
+    fm.writeString(module.filename, remote)      // 覆盖自己
+    const alert = new Alert()
+    alert.title = "🍼 脚本已更新"
+    alert.message = "已从 GitHub 下载新版本，请再运行一次。"
+    alert.addAction("好")
+    await alert.presentAlert()
+    Script.exit()                                 // 退出，下次运行就是新代码
+  } catch (e) {
+    // 网络失败静默跳过，不影响正常使用
+  }
+}
+
+const SUPABASE_URL = "https://elkcynbsoopvizmuevma.supabase.co"
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVsa2N5bmJzb29wdml6bXVldm1hIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc1NzU1OTksImV4cCI6MjA5MzE1MTU5OX0.LScczDOGWPPUNhnUEUk6l6AH_TrTO3OgwkOHaM48zuY"
+
+const BJ_OFFSET = 8 * 60 * 60 * 1000  // 北京时间 = UTC + 8h
+const LIMIT = 50                      // 拉 50 条足够今日统计 + 最近列表
+
+// ---------- 北京时间工具 ----------
+function bjTime(ts) {                 // 时间戳 → "HH:MM"（北京时间）
+  return new Date(ts + BJ_OFFSET).toISOString().slice(11, 16)
+}
+function bjDay(ts) {                  // 时间戳 → "YYYY-MM-DD"（北京时间）
+  return new Date(ts + BJ_OFFSET).toISOString().slice(0, 10)
+}
+
+// ---------- 状态颜色（对齐前端：2.5h绿 / 3h黄 / 3.5h橙 / 超3.5h红） ----------
+function statusColor(mins) {
+  if (mins < 150) return Color.green()
+  if (mins < 180) return new Color("#F9A825")
+  if (mins < 210) return Color.orange()
+  return Color.red()
+}
+function fmtElapsed(mins) {           // 分钟 → "42m" / "4.2h" / "1.2d"
+  if (mins < 60) return mins + "m"
+  if (mins < 48 * 60) return (mins / 60).toFixed(1) + "h"
+  return (mins / 24 / 60).toFixed(1) + "d"
+}
+
+// ---------- 拉数据 ----------
+async function fetchFeeds() {
+  const url = SUPABASE_URL + "/rest/v1/feeding_records" +
+    "?select=amount_ml,recorded_at&order=recorded_at.desc&limit=" + LIMIT
+  const req = new Request(url)
+  req.headers = {
+    "apikey": SUPABASE_KEY,
+    "Authorization": "Bearer " + SUPABASE_KEY,
+    "Accept": "application/json"
+  }
+  return await req.loadJSON()         // [{amount_ml, recorded_at}, ...]
+}
+
+// ---------- 汇总 ----------
+function summarize(feeds) {
+  const now = Date.now()
+  const today = bjDay(now)
+  let todayMl = 0, todayCount = 0
+  let list = []                       // 前 5 条：{time, ml}
+  for (const f of feeds) {
+    const ts = Date.parse(f.recorded_at)
+    const day = bjDay(ts)
+    if (day === today) {
+      todayMl += f.amount_ml || 0
+      todayCount++
+    }
+    if (list.length < 5) list.push({ time: bjTime(ts), ml: f.amount_ml || 0, ts })
+  }
+  const last = feeds.length > 0 ? feeds[0] : null
+  const lastTs = last ? Date.parse(last.recorded_at) : null
+  return {
+    todayMl, todayCount, list,
+    hasData: feeds.length > 0,
+    lastTime: lastTs ? bjTime(lastTs) : "--:--",
+    lastMl: last ? last.amount_ml || 0 : 0,
+    lastMins: lastTs ? Math.round((now - lastTs) / 60000) : -1,
+    lastDay: lastTs ? bjDay(lastTs) : null,
+    today: today
+  }
+}
+
+// ---------- 渲染 ----------
+function renderWidget(s) {
+  const w = new ListWidget()
+  w.backgroundColor = Color.dynamic(new Color("#FFFFFF"), new Color("#1C1C1E"))
+  w.setPadding(14, 14, 14, 14)
+
+  if (!s.hasData) {
+    w.addText("⚠️ 暂无喂奶数据").font = Font.mediumSystemFont(14)
+    w.addText("请检查网络/Supabase").font = Font.systemFont(11)
+    w.textColor = Color.gray()
+    return w
+  }
+  const color = statusColor(s.lastMins)
+
+  // 顶部行：标题 + 距上次喂奶
+  const top = w.addStack()
+  top.layoutHorizontally()
+  const sym = SFSymbol.named("cup.and.saucer.fill")
+  sym.applyMediumWeight()
+  const icon = top.addImage(sym.image)
+  icon.imageSize = new Size(16, 16)
+  icon.tintColor = color
+  top.addSpacer(6)
+  const t1 = top.addText("上次喂奶")
+  t1.font = Font.mediumSystemFont(14)
+  t1.textColor = Color.dynamic(new Color("#111111"), Color.white())
+  top.addSpacer(null)
+  const e1 = top.addText(s.lastMins >= 0 ? fmtElapsed(s.lastMins) : "--")
+  e1.font = Font.boldSystemFont(26)
+  e1.textColor = color
+
+  // 上次喂奶明细
+  const d1 = w.addText(s.lastTime + " · " + s.lastMl + "ml" + (s.lastDay !== s.today ? "（昨天）" : ""))
+  d1.font = Font.systemFont(11)
+  d1.textColor = Color.gray()
+  w.addSpacer(8)
+
+  // 今日汇总
+  const todayStr = "今日 " + s.todayMl + "ml · " + s.todayCount + " 次"
+  const t2 = w.addText(todayStr)
+  t2.font = Font.mediumSystemFont(15)
+  t2.textColor = Color.dynamic(new Color("#111111"), Color.white())
+  w.addSpacer(6)
+
+  // 最近记录列表
+  for (let i = 1; i < s.list.length; i++) {
+    const r = s.list[i]
+    const row = w.addStack()
+    row.layoutHorizontally()
+    const rt = row.addText(r.time)
+    rt.font = Font.systemFont(12)
+    rt.textColor = Color.dynamic(new Color("#333333"), new Color("#CCCCCC"))
+    row.addSpacer(null)
+    const rm = row.addText(r.ml + "ml")
+    rm.font = Font.systemFont(12)
+    rm.textColor = Color.dynamic(new Color("#333333"), new Color("#CCCCCC"))
+    w.addSpacer(2)
+  }
+
+  // 底部提示
+  w.addSpacer(null)
+  const foot = w.addText(s.lastMins >= 210 ? "🍼 该喂奶啦" : s.lastMins >= 180 ? "⏰ 快到时间了" : "")
+  foot.font = Font.systemFont(11)
+  foot.textColor = color
+
+  w.refreshAfterDate = new Date(Date.now() + 15 * 60 * 1000)
+  return w
+}
+
+function renderSmall(s) {
+  const w = new ListWidget()
+  w.backgroundColor = Color.dynamic(new Color("#FFFFFF"), new Color("#1C1C1E"))
+  w.setPadding(12, 12, 12, 12)
+  if (!s.hasData) {
+    w.addText("⚠️ 暂无数据").font = Font.mediumSystemFont(13)
+    return w
+  }
+  const color = statusColor(s.lastMins)
+  const e = w.addText(s.lastMins >= 0 ? fmtElapsed(s.lastMins) : "--")
+  e.font = Font.boldSystemFont(30)
+  e.textColor = color
+  const d = w.addText("上次 " + s.lastTime + " · " + s.lastMl + "ml")
+  d.font = Font.systemFont(11)
+  d.textColor = Color.gray()
+  w.addSpacer(4)
+  const t = w.addText("今日 " + s.todayMl + "ml · " + s.todayCount + "次")
+  t.font = Font.systemFont(12)
+  t.textColor = Color.dynamic(new Color("#111111"), Color.white())
+  w.refreshAfterDate = new Date(Date.now() + 15 * 60 * 1000)
+  return w
+}
+
+function renderCircular(s) {
+  const w = new ListWidget()
+  const color = statusColor(s.lastMins)
+  const stack = w.addStack()
+  stack.layoutVertically()
+  stack.centerAlignContent()
+  const e = stack.addText(s.hasData && s.lastMins >= 0 ? fmtElapsed(s.lastMins) : "--")
+  e.font = Font.boldSystemFont(16)
+  e.textColor = color
+  const d = stack.addText("距喂奶")
+  d.font = Font.systemFont(9)
+  d.textColor = Color.dynamic(new Color("#333333"), new Color("#CCCCCC"))
+  return w
+}
+
+function renderInline(s) {
+  const w = new ListWidget()
+  const color = statusColor(s.lastMins)
+  if (!s.hasData) {
+    w.addText("🍼 暂无数据").textColor = color
+    return w
+  }
+  const t = w.addText("🍼 " + s.lastTime + " · " + fmtElapsed(s.lastMins))
+  t.textColor = color
+  return w
+}
+
+// ---------- 主流程 ----------
+async function main() {
+  let feeds = []
+  try {
+    feeds = await fetchFeeds()
+  } catch (err) {
+    const w = new ListWidget()
+    w.addText("⚠️ 加载失败").font = Font.mediumSystemFont(13)
+    w.addText("请检查网络后重试").font = Font.systemFont(10)
+    w.textColor = Color.red()
+    return w
+  }
+  const s = summarize(feeds)
+  const family = config.widgetFamily || "medium"
+  if (family === "accessoryCircular") return renderCircular(s)
+  if (family === "accessoryInline") return renderInline(s)
+  if (family === "small") return renderSmall(s)
+  return renderWidget(s)              // medium / large 共用
+}
+
+await checkAndSelfUpdate()            // 自更新检查（仅 App 内，小组件跳过）
+const widget = await main()
+if (config.runsInWidget) {
+  Script.setWidget(widget)
+} else {
+  await widget.presentMedium()
+}
+Script.complete()
