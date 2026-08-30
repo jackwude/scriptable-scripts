@@ -17,7 +17,7 @@
 //   锁屏/桌面小组件永远用本地已存代码，不会因网络请求白屏。
 // - 想关掉更新：把 SOURCE 改成空字符串 "" 即可。
 //
-// 刷新：iOS 决定实际刷新时机，脚本请求 15 分钟一次；
+// 刷新：脚本请求 1 分钟刷新一次（iOS 实际由系统调度，不保证精确）；
 //        打开 Scriptable App 运行一次可立即刷新。
 // ============================================================
 
@@ -186,7 +186,7 @@ function renderWidget(s) {
   foot.font = Font.systemFont(11)
   foot.textColor = color
 
-  w.refreshAfterDate = new Date(Date.now() + 15 * 60 * 1000)
+  w.refreshAfterDate = new Date(Date.now() + 60 * 1000)
   return w
 }
 
@@ -209,7 +209,7 @@ function renderSmall(s) {
   const t = w.addText("今日 " + s.todayMl + "ml · " + s.todayCount + "次")
   t.font = Font.systemFont(12)
   t.textColor = Color.dynamic(new Color("#111111"), Color.white())
-  w.refreshAfterDate = new Date(Date.now() + 15 * 60 * 1000)
+  w.refreshAfterDate = new Date(Date.now() + 60 * 1000)
   return w
 }
 
