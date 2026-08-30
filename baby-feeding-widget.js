@@ -1,4 +1,4 @@
-// 🍼 得宝喂奶小组件 v2.9（支持 GitHub 自更新）
+// 🍼 得宝喂奶小组件 v3.0（支持 GitHub 自更新）
 // ============================================================
 // 用法：
 // 1. iPhone 安装 Scriptable App
@@ -147,10 +147,10 @@ function addQuickButton(parent, label, type) {   // 快捷记录按钮（中间�
   const btn = parent.addStack()
   btn.backgroundColor = Color.dynamic(new Color("#EEF0F6"), new Color("#2C2C2E"))
   btn.cornerRadius = 7
-  btn.setPadding(5, 8, 5, 8)
+  btn.setPadding(4, 7, 4, 7)
   btn.url = "scriptable:///run/baby-record?type=" + type
   const t = btn.addText(label)
-  t.font = Font.mediumSystemFont(11)
+  t.font = Font.mediumSystemFont(10)
   t.textColor = Color.dynamic(new Color("#111111"), Color.white())
   return btn
 }
@@ -158,7 +158,7 @@ function addQuickButton(parent, label, type) {   // 快捷记录按钮（中间�
 function renderWidget(s) {
   const w = new ListWidget()
   w.backgroundColor = Color.dynamic(new Color("#FFFFFF"), new Color("#1C1C1E"))
-  w.setPadding(14, 14, 14, 14)
+  w.setPadding(10, 12, 10, 12)
 
   if (!s.hasData) {
     w.addText("⚠️ 暂无喂奶数据").font = Font.mediumSystemFont(14)
@@ -175,22 +175,22 @@ function renderWidget(s) {
   const sym = SFSymbol.named("cup.and.saucer.fill")
   sym.applyMediumWeight()
   const icon = top.addImage(sym.image)
-  icon.imageSize = new Size(16, 16)
+  icon.imageSize = new Size(14, 14)
   icon.tintColor = color
-  top.addSpacer(6)
+  top.addSpacer(5)
   const t1 = top.addText("上次喂奶")
-  t1.font = Font.mediumSystemFont(14)
+  t1.font = Font.mediumSystemFont(13)
   t1.textColor = Color.dynamic(new Color("#111111"), Color.white())
   top.addSpacer(null)
   const e1 = top.addText(s.lastMins >= 0 ? fmtElapsed(s.lastMins) : "--")
-  e1.font = Font.boldSystemFont(26)
+  e1.font = Font.boldSystemFont(22)
   e1.textColor = color
 
   // 上次喂奶明细
   const d1 = w.addText(s.lastTime + " · " + s.lastMl + "ml" + (s.lastDay !== s.today ? "（昨天）" : ""))
-  d1.font = Font.systemFont(11)
+  d1.font = Font.systemFont(10)
   d1.textColor = Color.gray()
-  w.addSpacer(8)
+  w.addSpacer(5)
 
   // 双列卡片：今日奶量（含进度条）| 今日次数
   const cards = w.addStack()
@@ -205,12 +205,12 @@ function renderWidget(s) {
   c1.layoutVertically()
   c1.backgroundColor = cardBg
   c1.cornerRadius = 10
-  c1.setPadding(10, 12, 10, 12)
+  c1.setPadding(8, 10, 8, 10)
   const c1t = c1.addText("今日奶量")
   c1t.font = Font.systemFont(10)
   c1t.textColor = cardSub
   const c1v = c1.addText(s.todayMl + "ml")
-  c1v.font = Font.boldSystemFont(20)
+  c1v.font = Font.boldSystemFont(18)
   c1v.textColor = cardText
   // 进度条：目标 = 体重kg × 150ml/kg（WHO 中间值）
   if (s.weightG) {
@@ -220,11 +220,12 @@ function renderWidget(s) {
     bar.layoutHorizontally()
     bar.cornerRadius = 3
     bar.backgroundColor = Color.dynamic(new Color("#DDE1E8"), new Color("#3A3D44"))
-    bar.addSpacer(null)
+    // 🔴 fill 必须放在 spacer 前面：已喝（亮色）在左，未喝（露出底槽）在右
     const fill = bar.addStack()
     fill.backgroundColor = pct >= 1 ? Color.green() : color
     fill.cornerRadius = 3
-    fill.size = new Size(Math.round(100 * pct), 6)
+    fill.size = new Size(Math.round(110 * pct), 6)
+    bar.addSpacer(null)
     const cap = c1.addText(s.todayMl + " / " + target + "ml")
     cap.font = Font.systemFont(9)
     cap.textColor = cardSub
@@ -237,42 +238,42 @@ function renderWidget(s) {
   c2.layoutVertically()
   c2.backgroundColor = cardBg
   c2.cornerRadius = 10
-  c2.setPadding(10, 12, 10, 12)
+  c2.setPadding(8, 10, 8, 10)
   const c2t = c2.addText("今日次数")
   c2t.font = Font.systemFont(10)
   c2t.textColor = cardSub
   const c2v = c2.addText(s.todayCount + " 次")
-  c2v.font = Font.boldSystemFont(20)
+  c2v.font = Font.boldSystemFont(18)
   c2v.textColor = cardText
   const c2s = c2.addText(s.todayCount > 0 ? "间隔约 " + fmtElapsed(Math.round(1440 / s.todayCount)) : "还没有记录")
   c2s.font = Font.systemFont(9)
   c2s.textColor = cardSub
-  w.addSpacer(8)
+  w.addSpacer(6)
 
   // 快捷记录行（点击 → 打开 baby-record 脚本一键入库）
   const quickRow = w.addStack()
   quickRow.layoutHorizontally()
   quickRow.addSpacer(null)
   addQuickButton(quickRow, "🍼 喂奶", "feed")
-  quickRow.addSpacer(5)
+  quickRow.addSpacer(4)
   addQuickButton(quickRow, "💦 尿了", "wet")
-  quickRow.addSpacer(5)
+  quickRow.addSpacer(4)
   addQuickButton(quickRow, "💩 拉了", "dirty")
-  quickRow.addSpacer(5)
+  quickRow.addSpacer(4)
   addQuickButton(quickRow, "💊 AD", "ad")
   quickRow.addSpacer(null)
-  w.addSpacer(4)
+  w.addSpacer(3)
 
   // 底部提示 + 更新时间
   w.addSpacer(null)
   const footRow = w.addStack()
   footRow.layoutHorizontally()
   const foot = footRow.addText(s.lastMins >= 210 ? "🍼 该喂奶啦" : s.lastMins >= 180 ? "⏰ 快到时间了" : "")
-  foot.font = Font.systemFont(11)
+  foot.font = Font.systemFont(10)
   foot.textColor = color
   footRow.addSpacer(null)
   const upd = footRow.addText("更新 " + s.updatedAt)
-  upd.font = Font.systemFont(10)
+  upd.font = Font.systemFont(9)
   upd.textColor = Color.gray()
 
   w.refreshAfterDate = new Date(Date.now() + 60 * 1000)
