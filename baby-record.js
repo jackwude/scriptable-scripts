@@ -28,11 +28,11 @@ function nowHM() {                    // 当前北京时间 "HH:MM"
   return new Date(Date.now() + BJ_OFFSET).toISOString().slice(11, 16)
 }
 
-// ---------- 写 Supabase ----------
-async function post(table, data) {
-  const url = SUPABASE_URL + "/rest/v1/" + table
+// ⚠️ 注意：URL scheme 参数优先级高于一切（type/amount 直接指定则跳过菜单）
+
+async function fetchJSON(url, method, body) {
   const req = new Request(url)
-  req.method = "POST"
+  req.method = method || "GET"
   req.headers = {
     "apikey": SUPABASE_KEY,
     "Authorization": "Bearer " + SUPABASE_KEY,
@@ -40,8 +40,14 @@ async function post(table, data) {
     "Accept": "application/json",
     "Prefer": "return=representation"
   }
-  req.body = JSON.stringify(data)
+  if (body) req.body = JSON.stringify(body)
   return await req.loadJSON()
+}
+
+// ---------- 写 Supabase ----------
+async function post(table, data) {
+  const url = SUPABASE_URL + "/rest/v1/" + table
+  return await fetchJSON(url, "POST", data)
 }
 
 function sender() {
@@ -62,15 +68,38 @@ async function chooseType() {
   return ["feed", "wet", "dirty", "ad"][idx]
 }
 
+// 动态奶量档位：拉最近 20 条配方奶记录，取最常喝的量（众数）→ [众数-10, 众数, 众数+10]
+async function getAmountOptions() {
+  const fallback = [150, 180, 200, 215]
+  try {
+    const url = SUPABASE_URL + "/rest/v1/feeding_records" +
+      "?select=amount_ml&type=eq.formula&order=recorded_at.desc&limit=20"
+    const rows = await fetchJSON(url)
+    const amounts = rows.map(r => r.amount_ml).filter(v => typeof v === "number" && v > 0)
+    if (amounts.length === 0) return fallback
+    // 众数
+    const freq = {}
+    for (const v of amounts) freq[v] = (freq[v] || 0) + 1
+    let mode = amounts[0], max = 0
+    for (const k of Object.keys(freq)) {
+      if (freq[k] > max) { max = freq[k]; mode = parseInt(k) }
+    }
+    return Array.from(new Set([mode - 10, mode, mode + 10])).sort((a, b) => a - b)
+  } catch (e) {
+    return fallback          // 网络失败用兜底档位
+  }
+}
+
 async function chooseAmount() {
+  const options = await getAmountOptions()
   const a = new Alert()
   a.title = "🍼 奶量（ml）"
-  for (const v of [150, 180, 200, 215, 230]) {
+  for (const v of options) {
     a.addAction(v + "ml")
   }
   a.addCancelAction("取消")
   const idx = await a.presentAlert()
-  return [150, 180, 200, 215, 230][idx]
+  return options[idx]        // 取消返回 -1 → undefined，上层会退出
 }
 
 // ---------- 记录并确认 ----------
