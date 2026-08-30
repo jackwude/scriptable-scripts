@@ -19,6 +19,11 @@
 //
 // 刷新：脚本请求 1 分钟刷新一次（iOS 实际由系统调度，不保证精确）；
 //        打开 Scriptable App 运行一次可立即刷新。
+//
+// 点击跳转（v2.4 新增）：
+// - 中/大号：顶部「距上次喂奶」和「最近记录」区域 → 打开 baby-tracker
+// - 小号：整卡 → 打开 baby-tracker
+// - 锁屏：不设跳转（防误触）；底部「更新时间」不参与跳转
 // ============================================================
 
 // ---------- GitHub 自更新（仅在 App 内运行时检查） ----------
@@ -51,6 +56,7 @@ const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 
 const BJ_OFFSET = 8 * 60 * 60 * 1000  // 北京时间 = UTC + 8h
 const LIMIT = 50                      // 拉 50 条足够今日统计 + 最近列表
+const TRACKER_URL = "https://debao.indevs.in"  // 点击跳转的 baby-tracker 网页
 
 // ---------- 北京时间工具 ----------
 function bjTime(ts) {                 // 时间戳 → "HH:MM"（北京时间）
@@ -136,9 +142,10 @@ function renderWidget(s) {
   }
   const color = statusColor(s.lastMins)
 
-  // 顶部行：标题 + 距上次喂奶
+  // 顶部行：标题 + 距上次喂奶（点击 → baby-tracker）
   const top = w.addStack()
   top.layoutHorizontally()
+  top.url = TRACKER_URL
   const sym = SFSymbol.named("cup.and.saucer.fill")
   sym.applyMediumWeight()
   const icon = top.addImage(sym.image)
@@ -166,11 +173,12 @@ function renderWidget(s) {
   t2.textColor = Color.dynamic(new Color("#111111"), Color.white())
   w.addSpacer(6)
 
-  // 最近记录列表
+  // 最近记录列表（点击 → baby-tracker）
   for (let i = 1; i < s.list.length; i++) {
     const r = s.list[i]
     const row = w.addStack()
     row.layoutHorizontally()
+    row.url = TRACKER_URL
     const rt = row.addText(r.time)
     rt.font = Font.systemFont(12)
     rt.textColor = Color.dynamic(new Color("#333333"), new Color("#CCCCCC"))
@@ -206,6 +214,7 @@ function renderSmall(s) {
     return w
   }
   const color = statusColor(s.lastMins)
+  w.url = TRACKER_URL
   const e = w.addText(s.lastMins >= 0 ? fmtElapsed(s.lastMins) : "--")
   e.font = Font.boldSystemFont(30)
   e.textColor = color
