@@ -1,4 +1,4 @@
-// 🍼 得宝喂奶小组件 v3.3（支持 GitHub 自更新）
+// 🍼 得宝喂奶小组件 v3.4（支持 GitHub 自更新）
 // ============================================================
 // 用法：
 // 1. iPhone 安装 Scriptable App
@@ -192,66 +192,69 @@ function renderWidget(s) {
   e1.textColor = color
   w.addSpacer(6)
 
-  // 单张全宽卡：上=两列头，中=全宽进度条，下=明细行（空间全利用）
-  const card = w.addStack()
-  card.layoutVertically()
-  card.backgroundColor = Color.dynamic(new Color("#F2F4F8"), new Color("#2A2C31"))
-  card.cornerRadius = 10
-  card.setPadding(8, 10, 8, 10)
+  // 两张真·卡片：等宽 138 × 等高 74，中间弹性缝隙（对齐三要素全满足）
+  const cardsRow = w.addStack()
+  cardsRow.layoutHorizontally()
 
+  const cardBg = Color.dynamic(new Color("#F2F4F8"), new Color("#2A2C31"))
   const cardText = Color.dynamic(new Color("#111111"), Color.white())
   const cardSub = Color.gray()
 
-  // 第一行：左=今日奶量，右=今日次数
-  const head = card.addStack()
-  head.layoutHorizontally()
-  const colA = head.addStack()
-  colA.layoutVertically()
-  const c1t = colA.addText("今日奶量")
+  // 左卡：今日奶量 + 进度条（3 行结构）
+  const c1 = cardsRow.addStack()
+  c1.layoutVertically()
+  c1.backgroundColor = cardBg
+  c1.cornerRadius = 10
+  c1.setPadding(8, 10, 8, 10)
+  c1.size = new Size(138, 74)         // 🔑 等宽等高
+  const c1t = c1.addText("今日奶量")
   c1t.font = Font.systemFont(10)
   c1t.textColor = cardSub
-  const c1v = colA.addText(s.todayMl + "ml")
+  const c1v = c1.addText(s.todayMl + "ml")
   c1v.font = Font.boldSystemFont(18)
   c1v.textColor = cardText
-  head.addSpacer(null)
-  const colB = head.addStack()
-  colB.layoutVertically()
-  const c2t = colB.addText("今日次数")
-  c2t.font = Font.systemFont(10)
-  c2t.textColor = cardSub
-  const c2v = colB.addText(s.todayCount + " 次")
-  c2v.font = Font.boldSystemFont(18)
-  c2v.textColor = cardText
-
-  card.addSpacer(5)
-
-  // 全宽进度条：目标 = 体重kg × 150ml/kg（WHO 中间值）
   if (s.weightG) {
     const target = Math.round((s.weightG / 1000) * 150)
     const pct = Math.min(1, s.todayMl / target)
-    const bar = card.addStack()
+    const bar = c1.addStack()
     bar.layoutHorizontally()
     bar.cornerRadius = 3
     bar.backgroundColor = Color.dynamic(new Color("#DDE1E8"), new Color("#3A3D44"))
-    bar.size = new Size(280, 6)       // 近全宽底槽（中号卡内部约290pt）
+    bar.size = new Size(118, 5)       // 卡内进度条（138 - 左右 padding 20）
     // 🔴 fill 在 spacer 前：已喝（亮色）在左，未喝（底槽）在右
     const fill = bar.addStack()
     fill.backgroundColor = pct >= 1 ? Color.green() : color
     fill.cornerRadius = 3
-    fill.size = new Size(Math.round(280 * pct), 6)
+    fill.size = new Size(Math.round(118 * pct), 5)
     bar.addSpacer(null)
-    card.addSpacer(3)
-    // 明细行：左=进度数值，右=间隔（填满底部空间）
-    const capRow = card.addStack()
-    capRow.layoutHorizontally()
-    const cap = capRow.addText(s.todayMl + " / " + target + "ml")
-    cap.font = Font.systemFont(9)
-    cap.textColor = cardSub
-    capRow.addSpacer(null)
-    const itv = capRow.addText(s.todayCount > 0 ? "间隔约 " + fmtElapsed(Math.round(1440 / s.todayCount)) : "还没有记录")
-    itv.font = Font.systemFont(9)
-    itv.textColor = cardSub
+    const c1c = c1.addText(s.todayMl + " / " + target + "ml")
+    c1c.font = Font.systemFont(9)
+    c1c.textColor = cardSub
+  } else {
+    const c1c = c1.addText("体重待录入")
+    c1c.font = Font.systemFont(9)
+    c1c.textColor = cardSub
   }
+
+  cardsRow.addSpacer(null)            // 🔑 弹性缝隙 = 两卡间距（自适应居中）
+
+  // 右卡：今日次数 + 间隔（同为 3 行结构）
+  const c2 = cardsRow.addStack()
+  c2.layoutVertically()
+  c2.backgroundColor = cardBg
+  c2.cornerRadius = 10
+  c2.setPadding(8, 10, 8, 10)
+  c2.size = new Size(138, 74)         // 🔑 等宽等高
+  const c2t = c2.addText("今日次数")
+  c2t.font = Font.systemFont(10)
+  c2t.textColor = cardSub
+  const c2v = c2.addText(s.todayCount + " 次")
+  c2v.font = Font.boldSystemFont(18)
+  c2v.textColor = cardText
+  const c2s = c2.addText(s.todayCount > 0 ? "间隔约 " + fmtElapsed(Math.round(1440 / s.todayCount)) : "还没有记录")
+  c2s.font = Font.systemFont(9)
+  c2s.textColor = cardSub
+  c2.addSpacer(null)                  // 底部对齐：间隔行贴底与左卡 caption 对齐
   w.addSpacer(6)
 
   // 快捷记录行（点击 → 打开 baby-record 脚本一键入库）
