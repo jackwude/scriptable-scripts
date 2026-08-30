@@ -117,7 +117,8 @@ function summarize(feeds) {
     lastMl: last ? last.amount_ml || 0 : 0,
     lastMins: lastTs ? Math.round((now - lastTs) / 60000) : -1,
     lastDay: lastTs ? bjDay(lastTs) : null,
-    today: today
+    today: today,
+    updatedAt: bjTime(now)            // 本次渲染/拉数据时间（北京时间）
   }
 }
 
@@ -180,11 +181,17 @@ function renderWidget(s) {
     w.addSpacer(2)
   }
 
-  // 底部提示
+  // 底部提示 + 更新时间
   w.addSpacer(null)
-  const foot = w.addText(s.lastMins >= 210 ? "🍼 该喂奶啦" : s.lastMins >= 180 ? "⏰ 快到时间了" : "")
+  const footRow = w.addStack()
+  footRow.layoutHorizontally()
+  const foot = footRow.addText(s.lastMins >= 210 ? "🍼 该喂奶啦" : s.lastMins >= 180 ? "⏰ 快到时间了" : "")
   foot.font = Font.systemFont(11)
   foot.textColor = color
+  footRow.addSpacer(null)
+  const upd = footRow.addText("更新 " + s.updatedAt)
+  upd.font = Font.systemFont(10)
+  upd.textColor = Color.gray()
 
   w.refreshAfterDate = new Date(Date.now() + 60 * 1000)
   return w
@@ -209,6 +216,10 @@ function renderSmall(s) {
   const t = w.addText("今日 " + s.todayMl + "ml · " + s.todayCount + "次")
   t.font = Font.systemFont(12)
   t.textColor = Color.dynamic(new Color("#111111"), Color.white())
+  w.addSpacer(null)
+  const upd = w.addText("更新 " + s.updatedAt)
+  upd.font = Font.systemFont(10)
+  upd.textColor = Color.gray()
   w.refreshAfterDate = new Date(Date.now() + 60 * 1000)
   return w
 }
