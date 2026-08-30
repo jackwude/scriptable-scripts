@@ -207,7 +207,7 @@ function renderWidget(s) {
   quickRow.addSpacer(null)
   addQuickButton(quickRow, "🍼 喂奶", "feed")
   quickRow.addSpacer(5)
-  addQuickButton(quickRow, "💩 尿了", "wet")
+  addQuickButton(quickRow, "💦 尿了", "wet")
   quickRow.addSpacer(5)
   addQuickButton(quickRow, "💩 拉了", "dirty")
   quickRow.addSpacer(5)

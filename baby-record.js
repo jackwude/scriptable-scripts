@@ -2,7 +2,7 @@
 // ============================================================
 // 用法：
 // 1. Scriptable 新建脚本，命名「baby-record」，粘贴本代码
-// 2. 在喂奶小组件（中号）上点击「🍼 喂奶」「💩 尿了」「💩 拉了」「💊 AD」
+// 2. 在喂奶小组件（中号）上点击「🍼 喂奶」「💦 尿了」「💩 拉了」「💊 AD」
 //    会自动打开本脚本并完成记录
 // 3. 也可以直接运行本脚本：无参数时弹出选择菜单
 //
@@ -88,7 +88,7 @@ async function chooseType() {
   a.title = "🍼 得宝记录"
   a.message = "选择要记录的内容："
   a.addAction("🍼 喂奶")
-  a.addAction("💩 尿了")
+  a.addAction("💦 尿了")
   a.addAction("💩 拉了")
   a.addAction("💊 吃AD")
   a.addCancelAction("取消")
@@ -142,7 +142,7 @@ async function record(type, amount) {
   } else if (type === "wet") {
     table = "diaper_records"
     data = Object.assign({ type: "wet", amount: 1, recorded_at: ts }, sender())
-    label = "💩 尿了"
+    label = "💦 尿了"
   } else if (type === "dirty") {
     table = "diaper_records"
     data = Object.assign({ type: "dirty", amount: 1, recorded_at: ts }, sender())
