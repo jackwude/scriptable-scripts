@@ -1,4 +1,4 @@
-// 🍼 得宝喂奶小组件 v3.0（支持 GitHub 自更新）
+// 🍼 得宝喂奶小组件 v3.1（支持 GitHub 自更新）
 // ============================================================
 // 用法：
 // 1. iPhone 安装 Scriptable App
@@ -146,11 +146,11 @@ function summarize(feeds) {
 function addQuickButton(parent, label, type) {   // 快捷记录按钮（中间件样式）
   const btn = parent.addStack()
   btn.backgroundColor = Color.dynamic(new Color("#EEF0F6"), new Color("#2C2C2E"))
-  btn.cornerRadius = 7
-  btn.setPadding(4, 7, 4, 7)
+  btn.cornerRadius = 8
+  btn.setPadding(7, 12, 7, 12)
   btn.url = "scriptable:///run/baby-record?type=" + type
   const t = btn.addText(label)
-  t.font = Font.mediumSystemFont(10)
+  t.font = Font.mediumSystemFont(13)
   t.textColor = Color.dynamic(new Color("#111111"), Color.white())
   return btn
 }
@@ -168,9 +168,10 @@ function renderWidget(s) {
   }
   const color = statusColor(s.lastMins)
 
-  // 顶部行：标题 + 距上次喂奶（点击 → baby-tracker）
+  // 顶部行：标题 + 上次明细 + 距上次喂奶（合并成一行，点击 → baby-tracker）
   const top = w.addStack()
   top.layoutHorizontally()
+  top.centerAlignContent()
   top.url = TRACKER_URL
   const sym = SFSymbol.named("cup.and.saucer.fill")
   sym.applyMediumWeight()
@@ -181,16 +182,15 @@ function renderWidget(s) {
   const t1 = top.addText("上次喂奶")
   t1.font = Font.mediumSystemFont(13)
   t1.textColor = Color.dynamic(new Color("#111111"), Color.white())
+  top.addSpacer(5)
+  const d1 = top.addText(s.lastTime + " · " + s.lastMl + "ml" + (s.lastDay !== s.today ? "（昨天）" : ""))
+  d1.font = Font.systemFont(11)
+  d1.textColor = Color.gray()
   top.addSpacer(null)
   const e1 = top.addText(s.lastMins >= 0 ? fmtElapsed(s.lastMins) : "--")
   e1.font = Font.boldSystemFont(22)
   e1.textColor = color
-
-  // 上次喂奶明细
-  const d1 = w.addText(s.lastTime + " · " + s.lastMl + "ml" + (s.lastDay !== s.today ? "（昨天）" : ""))
-  d1.font = Font.systemFont(10)
-  d1.textColor = Color.gray()
-  w.addSpacer(5)
+  w.addSpacer(6)
 
   // 双列卡片：今日奶量（含进度条）| 今日次数
   const cards = w.addStack()
@@ -200,18 +200,20 @@ function renderWidget(s) {
   const cardText = Color.dynamic(new Color("#111111"), Color.white())
   const cardSub = Color.gray()
 
-  // 左卡：今日奶量
+  // 左卡：今日奶量（固定宽度保证与右卡等高对齐）
   const c1 = cards.addStack()
   c1.layoutVertically()
   c1.backgroundColor = cardBg
   c1.cornerRadius = 10
   c1.setPadding(8, 10, 8, 10)
+  c1.size = new Size(150, 0)          // 固定宽 150，高自适应
   const c1t = c1.addText("今日奶量")
   c1t.font = Font.systemFont(10)
   c1t.textColor = cardSub
   const c1v = c1.addText(s.todayMl + "ml")
   c1v.font = Font.boldSystemFont(18)
   c1v.textColor = cardText
+  c1.addSpacer(2)
   // 进度条：目标 = 体重kg × 150ml/kg（WHO 中间值）
   if (s.weightG) {
     const target = Math.round((s.weightG / 1000) * 150)
@@ -220,11 +222,12 @@ function renderWidget(s) {
     bar.layoutHorizontally()
     bar.cornerRadius = 3
     bar.backgroundColor = Color.dynamic(new Color("#DDE1E8"), new Color("#3A3D44"))
+    bar.size = new Size(130, 6)       // 底槽固定宽，fill 按比例填充
     // 🔴 fill 必须放在 spacer 前面：已喝（亮色）在左，未喝（露出底槽）在右
     const fill = bar.addStack()
     fill.backgroundColor = pct >= 1 ? Color.green() : color
     fill.cornerRadius = 3
-    fill.size = new Size(Math.round(110 * pct), 6)
+    fill.size = new Size(Math.round(130 * pct), 6)
     bar.addSpacer(null)
     const cap = c1.addText(s.todayMl + " / " + target + "ml")
     cap.font = Font.systemFont(9)
@@ -233,21 +236,24 @@ function renderWidget(s) {
 
   cards.addSpacer(8)
 
-  // 右卡：今日次数
+  // 右卡：今日次数（同宽对齐）
   const c2 = cards.addStack()
   c2.layoutVertically()
   c2.backgroundColor = cardBg
   c2.cornerRadius = 10
   c2.setPadding(8, 10, 8, 10)
+  c2.size = new Size(110, 0)          // 固定宽 110，与左卡同高
   const c2t = c2.addText("今日次数")
   c2t.font = Font.systemFont(10)
   c2t.textColor = cardSub
   const c2v = c2.addText(s.todayCount + " 次")
   c2v.font = Font.boldSystemFont(18)
   c2v.textColor = cardText
+  c2.addSpacer(2)
   const c2s = c2.addText(s.todayCount > 0 ? "间隔约 " + fmtElapsed(Math.round(1440 / s.todayCount)) : "还没有记录")
   c2s.font = Font.systemFont(9)
   c2s.textColor = cardSub
+  cards.addSpacer(null)               // 剩余空间留给卡片行，保持卡片顶部对齐
   w.addSpacer(6)
 
   // 快捷记录行（点击 → 打开 baby-record 脚本一键入库）
@@ -255,14 +261,14 @@ function renderWidget(s) {
   quickRow.layoutHorizontally()
   quickRow.addSpacer(null)
   addQuickButton(quickRow, "🍼 喂奶", "feed")
-  quickRow.addSpacer(4)
+  quickRow.addSpacer(6)
   addQuickButton(quickRow, "💦 尿了", "wet")
-  quickRow.addSpacer(4)
+  quickRow.addSpacer(6)
   addQuickButton(quickRow, "💩 拉了", "dirty")
-  quickRow.addSpacer(4)
+  quickRow.addSpacer(6)
   addQuickButton(quickRow, "💊 AD", "ad")
   quickRow.addSpacer(null)
-  w.addSpacer(3)
+  w.addSpacer(4)
 
   // 底部提示 + 更新时间
   w.addSpacer(null)
