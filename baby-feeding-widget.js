@@ -1,4 +1,4 @@
-// 🍼 得宝喂奶小组件 v3.5（支持 GitHub 自更新）
+// 🍼 得宝喂奶小组件 v3.6（支持 GitHub 自更新）
 // ============================================================
 // 用法：
 // 1. iPhone 安装 Scriptable App
@@ -192,7 +192,7 @@ function renderWidget(s) {
   e1.textColor = color
   w.addSpacer(6)
 
-  // 两张卡片 6:4 铺满整行（左162 + 缝4 + 右118 = 284 ≈ 中号卡内宽）
+  // 两张卡 6:4 铺满整行：弹性扩展 + 固定偏置（任意宽度自适应，零写死总宽）
   const cardsRow = w.addStack()
   cardsRow.layoutHorizontally()
 
@@ -200,13 +200,12 @@ function renderWidget(s) {
   const cardText = Color.dynamic(new Color("#111111"), Color.white())
   const cardSub = Color.gray()
 
-  // 左卡 6：今日奶量 + 进度条
+  // 左卡（≈60%）：今日奶量 + 进度条
   const c1 = cardsRow.addStack()
   c1.layoutVertically()
   c1.backgroundColor = cardBg
   c1.cornerRadius = 10
   c1.setPadding(8, 10, 8, 10)
-  c1.size = new Size(162, 74)
   const c1t = c1.addText("今日奶量")
   c1t.font = Font.systemFont(10)
   c1t.textColor = cardSub
@@ -220,40 +219,47 @@ function renderWidget(s) {
     bar.layoutHorizontally()
     bar.cornerRadius = 3
     bar.backgroundColor = Color.dynamic(new Color("#DDE1E8"), new Color("#3A3D44"))
-    bar.size = new Size(142, 5)       // 162 - 左右 padding 20
+    bar.size = new Size(142, 5)       // 固定宽进度条（左卡内宽约 159）
     // 🔴 fill 在 spacer 前：已喝（亮色）在左，未喝（底槽）在右
     const fill = bar.addStack()
     fill.backgroundColor = pct >= 1 ? Color.green() : color
     fill.cornerRadius = 3
     fill.size = new Size(Math.round(142 * pct), 5)
     bar.addSpacer(null)
-    const c1c = c1.addText(s.todayMl + " / " + target + "ml")
-    c1c.font = Font.systemFont(9)
-    c1c.textColor = cardSub
-  } else {
-    const c1c = c1.addText("体重待录入")
-    c1c.font = Font.systemFont(9)
-    c1c.textColor = cardSub
   }
+  // 末行 = 扩展行：caption + 弹性空隙 + 60pt 隐形偏置 → 左卡 ≈ 60%
+  const c1row = c1.addStack()
+  c1row.layoutHorizontally()
+  const c1c = c1row.addText(s.weightG && s.weightG > 0
+    ? s.todayMl + " / " + Math.round((s.weightG / 1000) * 150) + "ml"
+    : "体重待录入")
+  c1c.font = Font.systemFont(9)
+  c1c.textColor = cardSub
+  c1row.addSpacer(null)
+  const bias = c1row.addStack()       // 隐形偏置块：撑出 6:4 比例
+  bias.size = new Size(60, 1)
 
-  cardsRow.addSpacer(4)               // 固定小缝，非弹性
+  cardsRow.addSpacer(4)               // 固定小缝
 
-  // 右卡 4：今日次数 + 间隔
+  // 右卡（≈40%）：今日次数 + 间隔
   const c2 = cardsRow.addStack()
   c2.layoutVertically()
   c2.backgroundColor = cardBg
   c2.cornerRadius = 10
   c2.setPadding(8, 10, 8, 10)
-  c2.size = new Size(118, 74)
   const c2t = c2.addText("今日次数")
   c2t.font = Font.systemFont(10)
   c2t.textColor = cardSub
   const c2v = c2.addText(s.todayCount + " 次")
   c2v.font = Font.boldSystemFont(18)
   c2v.textColor = cardText
-  const c2s = c2.addText(s.todayCount > 0 ? "间隔约 " + fmtElapsed(Math.round(1440 / s.todayCount)) : "还没有记录")
+  // 末行 = 扩展行：弹性空隙 → 右卡撑满剩余（≈40%）
+  const c2row = c2.addStack()
+  c2row.layoutHorizontally()
+  const c2s = c2row.addText(s.todayCount > 0 ? "间隔 " + fmtElapsedShort(Math.round(1440 / s.todayCount)) : "暂无记录")
   c2s.font = Font.systemFont(9)
   c2s.textColor = cardSub
+  c2row.addSpacer(null)
   w.addSpacer(6)
 
   // 快捷记录行（点击 → 打开 baby-record 脚本一键入库）
