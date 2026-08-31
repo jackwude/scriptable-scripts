@@ -1,4 +1,4 @@
-// 🍼 得宝一键记录 v1.5
+// 🍼 得宝一键记录 v1.6
 // ============================================================
 // 用法：
 // 1. Scriptable 新建脚本，命名「baby-record」，粘贴本代码
@@ -16,7 +16,7 @@
 // 需要权限：网络访问（首次运行 Scriptable 会弹窗询问）
 // 记录写入 Supabase，与飞书群录入同一张表（source=scriptable）
 //
-// 自更新（v1.5）：手动运行（无 type 参数）时自动检查 GitHub
+// 自更新（v1.6）：手动运行（无 type 参数）时自动检查 GitHub
 // 新版本并覆盖本地。按钮调用（带 type 参数）快速执行，跳过更新检查。
 // 想关掉：SOURCE 改成空字符串 ""。
 // ============================================================
@@ -80,7 +80,8 @@ async function post(table, data) {
 }
 
 function sender() {
-  return { source: "scriptable", sender_id: "scriptable", sender_name: "iPhone" }
+  // source=scriptable 是内部标识（前端不显示）；sender_name 显示为录入人
+  return { source: "scriptable", sender_id: "scriptable", sender_name: "超级大虾" }
 }
 
 // ---------- 菜单 ----------
