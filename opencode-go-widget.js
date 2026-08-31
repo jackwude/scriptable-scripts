@@ -1,4 +1,6 @@
-// opencode-go-widget.js — OpenCode Go 用量 iOS 桌面小组件 v1.2
+// opencode-go-widget.js — OpenCode Go 用量 iOS 桌面小组件 v1.3
+// v1.3 (2026-08-31): 明暗模式自适应(Color.dynamic, 对齐 baby widget 规范)；
+//                    refreshAfterDate 10min 匹配数据源频率(watch 哨兵 10min 写 JSON)
 // v1.2 (2026-08-31): 修复 iPhone 读不到 iCloud 数据 → 读前先 downloadFileFromiCloud
 //                    (Mac 每次覆盖写入后 iPhone 端文件变云端占位符, readString 直接报错)
 // v1.1 (2026-08-31): 修复中号组件高度超限(172pt>158pt)导致标题/文字被切边；
@@ -55,6 +57,16 @@ async function loadData() {
 }
 
 // ==================== 工具函数 ====================
+// 明暗自适应（v1.3，对齐 baby-feeding-widget 规范：Color.dynamic(亮,暗)）
+const C = {
+  bg:      Color.dynamic(new Color("#FFFFFF"), new Color("#1C1C1E")),
+  title:   Color.dynamic(new Color("#111111"), Color.white()),
+  sub:     Color.dynamic(new Color("#8E8E93"), new Color("#8E8E93")),
+  sub2:    Color.dynamic(new Color("#6C6C70"), new Color("#AEAEB2")),
+  track:   Color.dynamic(new Color("#DDE1E8"), new Color("#2C2C2E")),
+  ok:      Color.dynamic(new Color("#248A3D"), new Color("#30D158")),
+}
+
 function fmtReset(sec) {
   sec = Math.max(0, Math.floor(sec || 0))
   if (sec >= 86400) {
@@ -70,9 +82,10 @@ function fmtReset(sec) {
 }
 
 function barColor(pct) {
-  if (pct >= 85) return new Color("#ff453a")   // 红
-  if (pct >= 50) return new Color("#ff9f0a")   // 橙
-  return new Color("#30d158")                  // 绿
+  // 明暗两套：亮模式用深色系保证对比度，暗模式用 iOS 亮色
+  if (pct >= 85) return Color.dynamic(new Color("#D70015"), new Color("#FF453A"))   // 红
+  if (pct >= 50) return Color.dynamic(new Color("#C93400"), new Color("#FF9F0A"))   // 橙
+  return Color.dynamic(new Color("#248A3D"), new Color("#30D158"))                  // 绿
 }
 
 // ==================== 小组件渲染 ====================
@@ -80,10 +93,7 @@ function barColor(pct) {
 //   padding 12+10 + header 17 + 3行×(3+13+4+11) + footer 11 ≈ 145pt ✅
 async function buildWidget(data) {
   const w = new ListWidget()
-  const darkBg = new LinearGradient()
-  darkBg.colors = [new Color("#1c1c1e"), new Color("#111113")]
-  darkBg.locations = [0, 1]
-  w.backgroundGradient = darkBg
+  w.backgroundColor = C.bg                    // v1.3 明暗自适应
   w.spacing = 0
   w.setPadding(12, 14, 10, 14)
 
@@ -91,12 +101,12 @@ async function buildWidget(data) {
   const header = w.addStack()
   const title = header.addText("OpenCode Go")
   title.font = Font.boldSystemFont(14)
-  title.textColor = Color.white()
+  title.textColor = C.title
   header.addSpacer(null)
   if (data.updated_at) {
     const up = header.addText(data.updated_at.slice(5))  // MM-DD HH:MM
     up.font = Font.mediumSystemFont(9)
-    up.textColor = new Color("#8e8e93")
+    up.textColor = C.sub
   }
   w.addSpacer(6)
 
@@ -119,7 +129,7 @@ async function buildWidget(data) {
     const top = w.addStack()
     const lb = top.addText(r.label)
     lb.font = Font.mediumSystemFont(11)
-    lb.textColor = new Color("#aeaeb2")
+    lb.textColor = C.sub2
     top.addSpacer(null)
     const pv = top.addText(pct.toFixed(0) + "%")
     pv.font = Font.boldMonospacedSystemFont(12)
@@ -130,7 +140,7 @@ async function buildWidget(data) {
     const bar = w.addStack()
     bar.size = new Size(BAR_W, 4)
     bar.cornerRadius = 2
-    bar.backgroundColor = new Color("#2c2c2e")
+    bar.backgroundColor = C.track
     const fill = bar.addStack()
     fill.size = new Size(Math.max(3, Math.round(BAR_W * pct / 100)), 4)
     fill.cornerRadius = 2
@@ -143,10 +153,10 @@ async function buildWidget(data) {
     bot.addSpacer(null)
     const st = bot.addText("● ")
     st.font = Font.mediumSystemFont(9)
-    st.textColor = m.status === "ok" ? barColor(pct) : new Color("#ff9f0a")
+    st.textColor = m.status === "ok" ? barColor(pct) : C.sub2
     const rt = bot.addText("重置 " + fmtReset(m.reset_in_sec))
     rt.font = Font.mediumSystemFont(9)
-    rt.textColor = new Color("#8e8e93")
+    rt.textColor = C.sub
     w.addSpacer(5)
   }
 
@@ -154,7 +164,10 @@ async function buildWidget(data) {
   foot.addSpacer(null)
   const ft = foot.addText("状态 正常")
   ft.font = Font.mediumSystemFont(9)
-  ft.textColor = new Color("#30d158")
+  ft.textColor = C.ok
+
+  // v1.3：请求 10 分钟刷新，匹配数据源频率（iOS 按此尽早调度，实际时机由系统决定）
+  w.refreshAfterDate = new Date(Date.now() + 10 * 60 * 1000)
 
   return w
 }
