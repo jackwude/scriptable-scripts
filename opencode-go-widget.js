@@ -1,8 +1,10 @@
-// opencode-go-widget.js — OpenCode Go 用量 iOS 桌面小组件 v1.1
+// opencode-go-widget.js — OpenCode Go 用量 iOS 桌面小组件 v1.2
+// v1.2 (2026-08-31): 修复 iPhone 读不到 iCloud 数据 → 读前先 downloadFileFromiCloud
+//                    (Mac 每次覆盖写入后 iPhone 端文件变云端占位符, readString 直接报错)
 // v1.1 (2026-08-31): 修复中号组件高度超限(172pt>158pt)导致标题/文字被切边；
 //                    顺序改为 5H → 周 → 月；压缩字号与间距重算高度 ≤145pt
-// 数据源：~/.hermes/scripts/opencode-go-widget-bridge.py 写入 iCloud 的 opencode-go-widget-data.json
-//        （Mac sidecar 每 15 分钟抓 opencode.ai 用量 → iCloud 同步到 iPhone）
+// 数据源：~/.hermes/scripts/opencode-go-usage-card.py --watch 每次抓取顺带写入
+//        iCloud 的 opencode-go-widget-data.json（Mac sidecar 每 10 分钟）
 // 用法：Scriptable 添加小组件，选择本脚本，中号(medium)；或 App 内运行预览
 // 权限：无（只读 iCloud 文件）
 
@@ -30,7 +32,10 @@ async function checkAndSelfUpdate() {
 }
 
 // ==================== 读数据（iCloud 优先，本地兜底） ====================
-function loadData() {
+// v1.2: 必须先 downloadFileFromiCloud —— Mac 每次覆盖写入后，iPhone 端文件
+// 变成"云端占位符(未下载)"，直接 readString 会报错导致 loadData 返回 null。
+// 官方：downloadFileFromiCloud 对本地文件也安全，可无条件调用。
+async function loadData() {
   const fms = []
   try { fms.push(FileManager.iCloud()) } catch (e) {}
   fms.push(FileManager.local())
@@ -38,6 +43,9 @@ function loadData() {
     try {
       const p = fm.joinPath(fm.documentsDirectory(), "opencode-go-widget-data.json")
       if (fm.fileExists(p)) {
+        if (fm.downloadFileFromiCloud) {
+          await fm.downloadFileFromiCloud(p)
+        }
         const obj = JSON.parse(fm.readString(p))
         if (obj && obj.meters) return obj
       }
@@ -153,23 +161,23 @@ async function buildWidget(data) {
 
 // ==================== 入口 ====================
 if (config.runsInWidget) {
-  const data = loadData()
+  const data = await loadData()
   if (!data) {
     const w = new ListWidget()
     w.addText("⚠️ 暂无数据")
-    w.addText("请在 Mac 运行数据桥脚本")
+    w.addText("等待 iCloud 同步…")
     Script.setWidget(w)
   } else {
     Script.setWidget(await buildWidget(data))
   }
 } else {
   await checkAndSelfUpdate()
-  const data = loadData()
+  const data = await loadData()
   const w = data ? await buildWidget(data) : null
   if (w) { await w.presentMedium() } else {
     const e = new Alert()
     e.title = "⚠️ 没有数据"
-    e.message = "请先在 Mac 上运行：python3 ~/.hermes/scripts/opencode-go-widget-bridge.py\n（会抓用量并写入 iCloud，等同步后重试）"
+    e.message = "iCloud 里还没同步到数据文件。\n请确认 Mac 端 watch 哨兵正常（每 10 分钟写 JSON 到 iCloud Scriptable 目录）。"
     e.addAction("好")
     await e.presentAlert()
   }
